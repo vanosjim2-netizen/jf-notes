@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jf.notes</title>
+<script>
+(function(){var p=localStorage.getItem('jf-theme')||'auto';var d=p==='dark'||(p==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f4f4f6;--panel:#fff;--line:#e3e3e8;--hover:#ececf1;--text:#16161a;--muted:#6b6b76;--accent:#e03131;--abtn:#e03131;--onacc:#fff;--tint:rgba(224,49,49,.1);--paper:#fff;--canvas:#f1f1f4;--shadow:0 1px 4px rgba(0,0,0,.1);--danger:#e03131}
+[data-theme=dark]{--bg:#0f0f10;--panel:#18181b;--line:#2a2a2e;--hover:#222226;--text:#f4f4f5;--muted:#9a9aa3;--accent:#ff6b6b;--abtn:#fa5252;--tint:rgba(255,107,107,.13);--paper:#1b1b1f;--canvas:#111113;--shadow:none;--danger:#ff6b6b}
+html,body{height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+button,select,input{font:inherit}
+button,select{cursor:pointer}
+.hidden{display:none!important}
+.boot{height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:600;color:var(--text);text-decoration:none}
+.logo{display:flex}.logo svg{width:36px;height:36px}
+.dot{color:var(--accent)}
+.badge{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--tint);color:var(--accent);white-space:nowrap}
+.badge.off{background:rgba(224,49,49,.15);color:var(--danger)}
+#auth{height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative}
+#auth .themeBtn{position:absolute;top:16px;right:16px}
+.auth-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+.sub{color:var(--muted);font-size:14px;margin-top:6px}
+.tabs{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:10px;margin:24px 0 16px}
+.tabs button{flex:1;padding:8px;border:0;border-radius:8px;background:transparent;color:var(--muted)}
+.tabs button.active{background:var(--panel);color:var(--text);box-shadow:var(--shadow)}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.inp{width:100%;padding:8px 11px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text)}
+.inp:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.btn{padding:9px 14px;border:0;border-radius:8px;background:var(--abtn);color:var(--onacc);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.sec{background:var(--hover);color:var(--text);font-weight:500}
+.full{width:100%}
+.link{background:none;border:0;color:var(--muted);font-size:13px;margin-top:12px;text-decoration:underline}
+.msg{font-size:13px;margin-top:12px;min-height:18px}
+.msg.err{color:var(--danger)}.msg.ok{color:#2f9e44}
+#app{display:grid;grid-template-rows:52px 1fr;height:100vh}
+header{display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+header .brand{font-size:18px}
+header .logo svg{width:28px;height:28px}
+.spacer{flex:1}
+#status{font-size:13px;color:var(--muted);white-space:nowrap}
+.icon-btn{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 10px;font-size:13px;white-space:nowrap}
+.icon-btn:hover{background:var(--hover)}
+.icon-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.icon-btn.on{border-color:var(--accent);color:var(--accent)}
+.menu{position:relative}
+.menu summary{list-style:none}
+.menu summary::-webkit-details-marker{display:none}
+.menu-pop{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:220px;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:70vh;overflow-y:auto}
+.menu-pop.left{right:auto;left:0}
+.menu-pop button,.menu-pop a{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;color:var(--text);padding:8px 10px;border-radius:6px;font-size:14px;text-decoration:none}
+.menu-pop button:hover,.menu-pop a:hover{background:var(--hover)}
+.menu-pop .info{padding:8px 10px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;word-break:break-all}
+.menu-pop .mh{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 10px 4px}
+.menu-pop hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.cdot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;display:inline-block}
+.main{display:grid;grid-template-columns:230px 260px 1fr;min-height:0;position:relative}
+body.side-hidden .main{grid-template-columns:0 0 1fr}
+body.side-hidden #nav,body.side-hidden #pagesCol{display:none}
+#nav{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.nbbar{display:flex;gap:4px;padding:10px;border-bottom:1px solid var(--line)}
+.nbbar .menu{flex:1;min-width:0}
+.nb-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-weight:600;font-size:14px;cursor:pointer;overflow:hidden}
+.nb-btn span.nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-item .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-item .dt{font-size:11px;color:var(--muted)}
+.nb-item.cur{background:var(--tint)}
+.nb-acts{display:flex;gap:4px;padding:4px 10px 8px}
+.nb-acts button{font-size:12px;padding:3px 8px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.sec-head button{background:none;border:0;color:var(--accent);font-size:13px;font-weight:600;text-transform:none;letter-spacing:0}
+#secList{list-style:none;overflow-y:auto;flex:1;padding:0 8px 10px}
+#secList li{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 0;border-radius:8px;cursor:pointer;margin-bottom:2px;position:relative}
+#secList li .bar{width:5px;align-self:stretch;border-radius:0 4px 4px 0}
+#secList li .nm{flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#secList li .cnt{font-size:11px;color:var(--muted)}
+#secList li:hover{background:var(--hover)}
+#secList li.active{background:var(--sectint,var(--tint));font-weight:600}
+#secList li .sacts{display:none;gap:2px}
+#secList li:hover .sacts{display:flex}
+#secList li:hover .cnt{display:none}
+.sacts button,.pacts button{background:none;border:0;color:var(--muted);font-size:12px;padding:2px 4px;border-radius:4px}
+.sacts button:hover,.pacts button:hover{background:var(--line);color:var(--text)}
+#secList li.drop,#pageList li.drop{box-shadow:0 -3px 0 var(--accent)}
+.nav-foot{border-top:1px solid var(--line);padding:8px 10px;display:flex;gap:6px}
+#pagesCol{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.pages-top{padding:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+#secTitle{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pageList{list-style:none;overflow-y:auto;flex:1;padding:6px}
+#pageList li{padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;position:relative;border-left:3px solid transparent}
+#pageList li:hover{background:var(--hover)}
+#pageList li.active{background:var(--tint);border-left-color:var(--accent)}
+#pageList .t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:44px}
+#pageList .s{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+#pageList .d{font-size:11px;color:var(--muted);margin-top:2px}
+#pageList .chip{font-size:10px;padding:1px 6px;border-radius:999px;color:#fff;margin-right:4px}
+#pageList .pacts{position:absolute;right:6px;top:7px;display:none}
+#pageList li:hover .pacts{display:flex}
+.empty-list{color:var(--muted);font-size:13px;padding:10px}
+#editorCol{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--canvas)}
+.toolbar{display:flex;flex-wrap:wrap;gap:2px;padding:5px 14px;border-bottom:1px solid var(--line);align-items:center;background:var(--panel)}
+.toolbar>button,.toolbar select,.toolbar summary{background:transparent;border:1px solid transparent;color:var(--text);border-radius:6px;padding:3px 8px;min-width:30px;font-size:13px;height:29px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.toolbar>button:hover,.toolbar summary:hover{background:var(--hover);border-color:var(--line)}
+.toolbar button.on{background:var(--tint);border-color:var(--accent)}
+.toolbar select{border-color:var(--line);background:var(--bg)}
+.toolbar label{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--muted);padding:0 4px}
+.toolbar input[type=color]{width:24px;height:24px;border:0;background:none;cursor:pointer;padding:0}
+.sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+#pageScroll{flex:1;overflow-y:auto;padding:28px 20px 60px}
+.sheet{max-width:880px;margin:0 auto;background:var(--paper);border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--line);padding:34px 48px 60px;min-height:calc(100% - 10px)}
+#pTitle{width:100%;border:0;border-bottom:2px solid var(--line);background:transparent;color:var(--text);font-size:30px;font-weight:700;padding:4px 0 8px;outline:none}
+#pTitle:focus{border-bottom-color:var(--accent)}
+#pMeta{font-size:12px;color:var(--muted);margin:8px 0 18px}
+#editor{outline:none;min-height:420px;font-size:16px;line-height:1.65;overflow-wrap:break-word}
+#editor:empty:before{content:"Begin met typen...";color:var(--muted)}
+#editor.lined{background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(1.65em - 1px),var(--line) calc(1.65em - 1px),var(--line) 1.65em);background-attachment:local}
+#editor h1{font-size:1.9em;line-height:1.25;margin:.5em 0 .3em}
+#editor h2{font-size:1.45em;line-height:1.3;margin:.5em 0 .3em;color:var(--accent)}
+#editor h3{font-size:1.2em;margin:.5em 0 .2em}
+#editor p,#editor div{margin:0}
+#editor ul,#editor ol{padding-left:1.6em;margin:.2em 0}
+#editor blockquote{border-left:4px solid var(--accent);padding:2px 0 2px 14px;color:var(--muted);margin:.4em 0}
+#editor pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-family:ui-monospace,Consolas,monospace;font-size:14px;white-space:pre-wrap;margin:.4em 0}
+#editor a{color:var(--accent)}
+#editor img{max-width:100%;height:auto;border-radius:6px;margin:4px 0}
+#editor hr{border:0;border-top:2px solid var(--line);margin:1em 0}
+#editor table{border-collapse:collapse;margin:.5em 0;min-width:50%}
+#editor td,#editor th{border:1px solid var(--line);padding:6px 10px;min-width:60px;vertical-align:top}
+#editor th{background:var(--tint)}
+#editor ul.todo{list-style:none;padding-left:4px}
+#editor ul.todo li{position:relative;padding-left:30px;margin:.15em 0}
+#editor ul.todo li::before{content:'';position:absolute;left:2px;top:.3em;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;cursor:pointer;box-sizing:border-box}
+#editor ul.todo li.done::before{background:var(--accent)}
+#editor ul.todo li.done::after{content:'';position:absolute;left:8px;top:calc(.3em + 2px);width:4px;height:8px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg);pointer-events:none}
+#editor ul.todo li.done{color:var(--muted);text-decoration:line-through}
+#editor .tag{display:inline-block;font-size:.8em;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:4px}
+#editor .tag.star{background:#fff3bf;color:#8a6100}
+#editor .tag.vraag{background:#d0ebff;color:#1864ab}
+#editor .tag.idee{background:#d3f9d8;color:#2b8a3e}
+#editor .tag.let{background:#ffe3e3;color:#c92a2a}
+[data-theme=dark] #editor [style*="background"]{color:#111}
+.empty-page{text-align:center;color:var(--muted);padding:80px 20px}
+.empty-page .btn{margin-top:14px}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--muted);padding:20px;text-align:center}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:18px;margin-bottom:12px}
+.modal p{color:var(--muted);font-size:14px;margin-bottom:12px}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches button{width:30px;height:30px;border-radius:50%;border:3px solid transparent}
+.swatches button.on{border-color:var(--text)}
+.keys{width:100%;border-collapse:collapse;font-size:13px}
+.keys td{padding:5px 4px;border-bottom:1px solid var(--line)}
+kbd{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:12px}
+.copy-row{display:flex;gap:6px}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;z-index:200}
+body.ro .edit-only,body.ro .toolbar,body.ro .sacts,body.ro .pacts{display:none!important}
+@media(max-width:900px){
+.main{grid-template-columns:1fr}
+#nav,#pagesCol{position:absolute;top:0;bottom:0;z-index:30;box-shadow:0 0 30px rgba(0,0,0,.3);display:none}
+#nav{left:0;width:230px}#pagesCol{left:230px;width:260px}
+body.side-open #nav,body.side-open #pagesCol{display:flex}
+body.side-hidden .main{grid-template-columns:1fr}
+.sheet{padding:22px 18px 40px}
+#status,.hide-m{display:none}
+}
+@media print{
+html,body{height:auto;overflow:visible;background:#fff}
+header,#nav,#pagesCol,.toolbar,.no-print{display:none!important}
+#app,.main,#editorCol,#pageScroll{display:block;height:auto;overflow:visible;padding:0;background:#fff}
+.sheet{box-shadow:none;border:0;padding:0;max-width:none;background:#fff;color:#000}
+#editor{color:#000}#pTitle{color:#000;border:0}
+}
+</style>
+</head>
+<body>
+<div class="boot" id="boot">Laden...</div>
+
+<div id="auth" class="hidden">
+  <button class="icon-btn themeBtn"></button>
+  <div class="auth-card">
+    <div class="brand">
+      <span class="logo" id="logoSrc"><svg viewBox="420 40 220 220"><rect x="424" y="44" width="212" height="212" rx="46" fill="#111" stroke="#2a2a2e" stroke-width="6"/><rect x="462" y="74" width="128" height="152" rx="10" fill="#fff"/><rect x="588" y="88" width="18" height="24" rx="5" fill="#e03131"/><rect x="588" y="118" width="18" height="24" rx="5" fill="#ff8787"/><rect x="588" y="148" width="18" height="24" rx="5" fill="#ffc9c9"/><rect x="452" y="92" width="20" height="9" rx="4.5" fill="#e03131"/><rect x="452" y="120" width="20" height="9" rx="4.5" fill="#e03131"/><rect x="452" y="148" width="20" height="9" rx="4.5" fill="#e03131"/><rect x="452" y="176" width="20" height="9" rx="4.5" fill="#e03131"/><rect x="452" y="204" width="20" height="9" rx="4.5" fill="#e03131"/><text x="482" y="117" font-size="30" font-weight="700" font-family="system-ui,sans-serif" fill="#111">jf<tspan fill="#e03131">.</tspan></text><rect x="482" y="132" width="86" height="6" rx="3" fill="#e03131"/><rect x="482" y="152" width="15" height="15" rx="3" fill="none" stroke="#e03131" stroke-width="3"/><polyline points="485,159 489,163 495,155" fill="none" stroke="#e03131" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><rect x="505" y="156" width="62" height="6" rx="3" fill="#ffc9c9"/><rect x="482" y="178" width="15" height="15" rx="3" fill="none" stroke="#e03131" stroke-width="3"/><rect x="505" y="182" width="50" height="6" rx="3" fill="#ffc9c9"/><rect x="482" y="204" width="70" height="6" rx="3" fill="#ffc9c9"/></svg></span>
+      <span>jf<span class="dot">.</span>notes</span>
+    </div>
+    <p class="sub">Notities, simpel gemaakt. Eén account voor alle jf.tools.</p>
+    <div class="tabs">
+      <button type="button" data-mode="login" class="active">Inloggen</button>
+      <button type="button" data-mode="register">Registreren</button>
+    </div>
+    <form id="authForm">
+      <label class="field"><span>E-mail</span><input class="inp" type="email" id="email" required autocomplete="email"></label>
+      <label class="field"><span>Wachtwoord</span><input class="inp" type="password" id="password" required autocomplete="current-password"></label>
+      <button class="btn full" id="authSubmit" type="submit">Inloggen</button>
+    </form>
+    <button class="link" id="forgot" type="button">Wachtwoord vergeten?</button>
+    <div class="msg" id="authMsg"></div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <button class="icon-btn" id="menuBtn" title="Notitieblok-navigatie tonen/verbergen">&#9776;</button>
+    <a class="brand" href="./"><span class="logo"></span><span>jf<span class="dot">.</span>notes</span></a>
+    <details class="menu">
+      <summary class="icon-btn">Apps &#9662;</summary>
+      <div class="menu-pop left">
+        <a href="../jf-office/">&#127968; jf.office &mdash; startscherm</a>
+        <hr>
+        <a href="../jf-pages/">&#128196; jf.pages &mdash; documenten</a>
+        <a href="../jf-cells/">&#128202; jf.cells &mdash; spreadsheets</a>
+        <a href="../jf-presentations/">&#127908; jf.presentations &mdash; presentaties</a>
+        <a href="../jf-notes/">&#128211; jf.notes &mdash; notities</a>
+      </div>
+    </details>
+    <span id="status"></span>
+    <span id="offline" class="badge off hidden">Offline</span>
+    <span id="roBadge" class="badge hidden">Alleen lezen</span>
+    <div class="spacer"></div>
+    <button class="icon-btn themeBtn"></button>
+    <a class="btn hidden" id="ownLink" href="./">Zelf notities maken</a>
+    <details class="menu edit-only">
+      <summary class="icon-btn">&#9881; Account</summary>
+      <div class="menu-pop">
+        <div class="info" id="userEmail"></div>
+        <button id="pwBtn">Wachtwoord wijzigen</button>
+        <button id="helpBtn">Sneltoetsen</button>
+        <button id="logout">Uitloggen</button>
+      </div>
+    </details>
+  </header>
+  <div class="main">
+    <nav id="nav">
+      <div class="nbbar">
+        <details class="menu" id="nbMenu">
+          <summary class="nb-btn"><span class="cdot" id="nbDot"></span><span class="nm" id="nbName">Notitieblokken</span>&#9662;</summary>
+          <div class="menu-pop left" id="nbList" style="min-width:260px"></div>
+        </details>
+        <details class="menu edit-only">
+          <summary class="icon-btn" title="Notitieblok-opties" style="height:100%">&#8943;</summary>
+          <div class="menu-pop">
+            <button id="nbRename">&#9998; Naam wijzigen</button>
+            <button id="nbColor">&#127912; Kleur wijzigen</button>
+            <button id="nbPin">&#9734; Favoriet</button>
+            <button id="nbShare">&#128279; Delen</button>
+            <hr>
+            <button id="nbDelete">&#128465; Naar prullenbak</button>
+          </div>
+        </details>
+      </div>
+      <div class="sec-head"><span>Secties</span><button class="edit-only" id="addSec" title="Nieuwe sectie (Alt+S)">+ Sectie</button></div>
+      <ul id="secList"></ul>
+      <div class="nav-foot edit-only"><button class="btn full" id="newNbBtn">+ Nieuw notitieblok</button></div>
+    </nav>
+    <section id="pagesCol">
+      <div class="pages-top">
+        <div id="secTitle"></div>
+        <input class="inp" id="search" placeholder="&#128269; Zoeken in notitieblok (Ctrl+F)">
+        <button class="btn sec full edit-only" id="addPage">+ Pagina (Alt+N)</button>
+      </div>
+      <ul id="pageList"></ul>
+    </section>
+    <section id="editorCol">
+      <div class="empty-state hidden" id="emptyState">
+        <p id="emptyText" style="font-size:16px">Nog geen notitieblok.</p>
+        <button class="btn edit-only" id="emptyNew">+ Nieuw notitieblok</button>
+      </div>
+      <div id="pageView" class="hidden" style="display:flex;flex-direction:column;min-height:0;flex:1">
+        <div class="toolbar no-print">
+          <button data-cmd="undo" title="Ongedaan maken (Ctrl+Z)">&#8630;</button>
+          <button data-cmd="redo" title="Opnieuw (Ctrl+Y)">&#8631;</button>
+          <span class="sep"></span>
+          <select id="blockSel" title="Stijl">
+            <option value="p">Normaal</option>
+            <option value="h1">Kop 1</option>
+            <option value="h2">Kop 2</option>
+            <option value="h3">Kop 3</option>
+            <option value="blockquote">Citaat</option>
+            <option value="pre">Code</option>
+          </select>
+          <button data-cmd="bold" title="Vet (Ctrl+B)"><b>B</b></button>
+          <button data-cmd="italic" title="Cursief (Ctrl+I)"><i>I</i></button>
+          <button data-cmd="underline" title="Onderstrepen (Ctrl+U)"><u>U</u></button>
+          <button data-cmd="strikeThrough" title="Doorhalen"><s>S</s></button>
+          <label title="Tekstkleur">A<input type="color" id="colorPick" value="#e03131"></label>
+          <label title="Markeerstift">&#9998;<input type="color" id="hlPick" value="#ffec99"></label>
+          <span class="sep"></span>
+          <button data-cmd="insertUnorderedList" title="Opsomming">&bull;&#8801;</button>
+          <button data-cmd="insertOrderedList" title="Nummering">1.&#8801;</button>
+          <button data-act="todo" title="Takenlijst (Alt+T)">&#9745; Taak</button>
+          <button data-cmd="outdent" title="Inspringen verkleinen">&#8676;</button>
+          <button data-cmd="indent" title="Inspringen">&#8677;</button>
+          <span class="sep"></span>
+          <details class="menu">
+            <summary title="Label toevoegen">&#127991; Label &#9662;</summary>
+            <div class="menu-pop left">
+              <button data-tag="star">&#11088; Belangrijk</button>
+              <button data-tag="vraag">&#10067; Vraag</button>
+              <button data-tag="idee">&#128161; Idee</button>
+              <button data-tag="let">&#9888;&#65039; Let op</button>
+            </div>
+          </details>
+          <button data-act="link" title="Link (Ctrl+K)">&#128279;</button>
+          <details class="menu">
+            <summary title="Afbeelding">&#128444; &#9662;</summary>
+            <div class="menu-pop left">
+              <button data-act="imgUpload">&#8679; Uploaden</button>
+              <button data-act="imgUrl">&#128279; Via een link</button>
+            </div>
+          </details>
+          <button data-act="table" title="Tabel">&#9638;</button>
+          <button data-cmd="insertHorizontalRule" title="Scheidingslijn">&#8213;</button>
+          <button data-act="clear" title="Opmaak wissen">&#10007;</button>
+          <button data-act="lined" id="linedBtn" title="Lijntjespapier">&#8801; Lijntjes</button>
+          <span class="spacer"></span>
+          <details class="menu">
+            <summary title="Pagina-opties">Pagina &#9662;</summary>
+            <div class="menu-pop" id="pageMenu"></div>
+          </details>
+        </div>
+        <div id="pageScroll">
+          <div class="sheet" id="sheet">
+            <input id="pTitle" placeholder="Naamloze pagina" maxlength="150">
+            <div id="pMeta"></div>
+            <div id="editor" contenteditable="true" spellcheck="true"></div>
+          </div>
+          <div class="empty-page hidden" id="noPage"><div style="font-size:40px">&#128211;</div><p>Deze sectie heeft nog geen pagina's.</p><button class="btn edit-only" id="noPageAdd">+ Nieuwe pagina</button></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="nbModal">
+  <div class="modal">
+    <h2 id="nbModalTitle">Nieuw notitieblok</h2>
+    <label class="field"><span>Naam</span><input class="inp" id="nbNameInp" maxlength="80" placeholder="Bijv. School, Ideeën, Dagboek"></label>
+    <label class="field"><span>Kleur</span></label>
+    <div class="swatches" id="nbSwatches"></div>
+    <div class="modal-foot"><button class="btn sec" data-close>Annuleren</button><button class="btn" id="nbSave">Maken</button></div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="shareModal">
+  <div class="modal">
+    <h2>Notitieblok delen</h2>
+    <p>Met een openbare link kan iedereen dit notitieblok lezen, maar niet bewerken.</p>
+    <label class="check"><input type="checkbox" id="publicChk"> Iedereen met de link kan lezen</label>
+    <div class="copy-row" id="shareRow"><input class="inp" id="shareLink" readonly><button class="btn" id="copyLink">Kopieer</button></div>
+    <div class="modal-foot"><button class="btn sec" data-close>Klaar</button></div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="helpModal">
+  <div class="modal" style="max-width:560px">
+    <h2>Sneltoetsen</h2>
+    <table class="keys">
+      <tr><td>Nieuwe pagina / sectie</td><td><kbd>Alt</kbd>+<kbd>N</kbd> / <kbd>Alt</kbd>+<kbd>S</kbd></td></tr>
+      <tr><td>Takenlijst</td><td><kbd>Alt</kbd>+<kbd>T</kbd> (klik op een vakje om af te vinken)</td></tr>
+      <tr><td>Zoeken in notitieblok</td><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td></tr>
+      <tr><td>Vet / cursief / onderstrepen</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd></td></tr>
+      <tr><td>Link invoegen</td><td><kbd>Ctrl</kbd>+<kbd>K</kbd> &mdash; Ctrl+klik om te openen</td></tr>
+      <tr><td>Kop 1 / Kop 2 / Normaal</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd> / <kbd>2</kbd> / <kbd>0</kbd></td></tr>
+      <tr><td>Vorige / volgende pagina</td><td><kbd>Ctrl</kbd>+<kbd>&uarr;</kbd> / <kbd>&darr;</kbd> (buiten de tekst)</td></tr>
+      <tr><td>Opslaan</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd> (gaat ook automatisch)</td></tr>
+      <tr><td>Screenshot plakken</td><td><kbd>Ctrl</kbd>+<kbd>V</kbd> in de pagina</td></tr>
+    </table>
+    <div class="modal-foot"><button class="btn sec" data-close>Sluiten</button></div>
+  </div>
+</div>
+<input type="file" id="imgFile" accept="image/*" hidden>
+
+<script>
+const SUPABASE_URL = 'https://azzhruqhvmxqwsyatlju.supabase.co';
+let SUPABASE_KEY = 'PLAK_HIER_JE_ANON_KEY';
+const $ = id => document.getElementById(id);
+const FIELDS = 'id,title,updated_at,created_at,pinned,deleted_at,is_public';
+const COLORS = ['#e03131', '#f76707', '#f59f00', '#37b24d', '#1c7ed6', '#7048e8', '#d6336c', '#495057'];
+let sb = null, items = [], currentId = null, currentUser, saveTimer = null, dirty = false, mode = 'login', nbView = 'list';
+let nb = null, nbTitle = '', secId = null, pageId = null, readOnly = false, savedRange = null;
+
+document.querySelectorAll('header .logo').forEach(l => l.innerHTML = $('logoSrc').innerHTML);
+function setMsg(t, type) { const m = $('authMsg'); m.textContent = t; m.className = 'msg ' + (type || 'err'); }
+function setStatus(t) { $('status').textContent = t; }
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.append(d); setTimeout(() => d.remove(), 2200); }
+function curItem() { return items.find(d => d.id === currentId); }
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function clean(h) { return window.DOMPurify ? DOMPurify.sanitize(h || '') : (h || ''); }
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function hashColor(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return COLORS[Math.abs(h) % COLORS.length]; }
+
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+function applyTheme() {
+  const p = localStorage.getItem('jf-theme') || 'auto';
+  document.documentElement.dataset.theme = (p === 'dark' || (p === 'auto' && mq.matches)) ? 'dark' : 'light';
+  const label = p === 'auto' ? '\u25D0 Auto' : p === 'light' ? '\u2600 Licht' : '\u263E Donker';
+  document.querySelectorAll('.themeBtn').forEach(b => { b.textContent = label; b.title = 'Thema wisselen (Auto volgt je Chrome-instelling)'; });
+}
+document.querySelectorAll('.themeBtn').forEach(b => b.onclick = () => {
+  const p = localStorage.getItem('jf-theme') || 'auto', next = p === 'auto' ? 'light' : p === 'light' ? 'dark' : 'auto';
+  localStorage.setItem('jf-theme', next); applyTheme();
+  toast(next === 'auto' ? 'Thema volgt nu je Chrome-instelling' : next === 'light' ? 'Licht thema' : 'Donker thema');
+});
+mq.addEventListener('change', applyTheme);
+window.addEventListener('storage', e => { if (e.key === 'jf-theme') applyTheme(); });
+applyTheme();
+
+document.addEventListener('click', e => { document.querySelectorAll('details.menu[open]').forEach(d => { if (!d.contains(e.target)) d.removeAttribute('open'); }); });
+document.addEventListener('click', e => { const b = e.target.closest('.menu-pop button'); if (b && !b.hasAttribute('data-keep')) { const d = b.closest('details'); if (d) d.removeAttribute('open'); } });
+function openModal(id) { $(id).classList.remove('hidden'); }
+function closeModals() { document.querySelectorAll('.modal-bg').forEach(m => m.classList.add('hidden')); }
+document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m || e.target.hasAttribute('data-close')) m.classList.add('hidden'); }));
+$('menuBtn').onclick = () => { if (window.innerWidth <= 900) document.body.classList.toggle('side-open'); else { document.body.classList.toggle('side-hidden'); localStorage.setItem('jf-notes-side', document.body.classList.contains('side-hidden') ? '0' : '1'); } };
+if (localStorage.getItem('jf-notes-side') === '0') document.body.classList.add('side-hidden');
+
+async function getKey() {
+  if (SUPABASE_KEY.indexOf('PLAK_HIER') !== 0) return SUPABASE_KEY;
+  try { const r = await fetch('../jf-pages/index.html', { cache: 'no-store' }); const t = await r.text(); const m = t.match(/const SUPABASE_KEY = '([^']+)'/); if (m && m[1].indexOf('PLAK_HIER') !== 0) { localStorage.setItem('jf-sb-key', m[1]); return m[1]; } } catch (e) {}
+  return localStorage.getItem('jf-sb-key');
+}
+async function init() {
+  const key = await getKey();
+  $('boot').classList.add('hidden');
+  if (!key) { $('auth').classList.remove('hidden'); setMsg('Kon de Supabase-key niet vinden.'); $('authSubmit').disabled = true; return; }
+  sb = supabase.createClient(SUPABASE_URL, key);
+  const viewId = new URLSearchParams(location.search).get('view');
+  if (viewId) return showViewer(viewId);
+  sb.auth.onAuthStateChange((event, session) => setTimeout(() => { if (event === 'PASSWORD_RECOVERY') changePassword(); render(session); }, 0));
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x === b));
+  $('authSubmit').textContent = mode === 'login' ? 'Inloggen' : 'Account maken';
+  $('password').autocomplete = mode === 'login' ? 'current-password' : 'new-password'; setMsg('');
+});
+function vertaalFout(m) {
+  if (/invalid login/i.test(m)) return 'E-mail of wachtwoord klopt niet.';
+  if (/already registered/i.test(m)) return 'Dit e-mailadres heeft al een account.';
+  if (/not confirmed/i.test(m)) return 'Bevestig eerst je e-mail (check je inbox).';
+  if (/rate limit/i.test(m)) return 'Te veel pogingen, probeer het straks opnieuw.';
+  if (/should be different/i.test(m)) return 'Kies een ander wachtwoord dan je huidige.';
+  return m;
+}
+$('authForm').onsubmit = async e => {
+  e.preventDefault(); if (!sb) return;
+  const email = $('email').value.trim(), password = $('password').value;
+  if (password.length < 6) return setMsg('Wachtwoord moet minstens 6 tekens zijn.');
+  $('authSubmit').disabled = true;
+  const res = mode === 'login' ? await sb.auth.signInWithPassword({ email, password }) : await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
+  $('authSubmit').disabled = false;
+  if (res.error) return setMsg(vertaalFout(res.error.message));
+  if (mode === 'register' && !res.data.session) setMsg('Account gemaakt! Check je e-mail om te bevestigen.', 'ok');
+};
+$('forgot').onclick = async () => { if (!sb) return; const email = $('email').value.trim(); if (!email) return setMsg('Vul eerst je e-mail in.'); const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }); setMsg(error ? vertaalFout(error.message) : 'Reset-link verstuurd naar je e-mail.', error ? 'err' : 'ok'); };
+async function changePassword() { const np = prompt('Nieuw wachtwoord (minstens 6 tekens):'); if (!np) return; if (np.length < 6) return alert('Wachtwoord moet minstens 6 tekens zijn.'); const { error } = await sb.auth.updateUser({ password: np }); alert(error ? vertaalFout(error.message) : 'Wachtwoord aangepast!'); }
+$('pwBtn').onclick = changePassword;
+$('helpBtn').onclick = () => openModal('helpModal');
+$('logout').onclick = async () => { await saveNow(); await sb.auth.signOut(); };
+function render(session) {
+  const u = session && session.user ? session.user.id : null;
+  if (u === currentUser) return; currentUser = u;
+  $('auth').classList.toggle('hidden', !!u); $('app').classList.toggle('hidden', !u);
+  if (u) { $('userEmail').textContent = session.user.email; loadItems(true); }
+  else { items = []; currentId = null; nb = null; dirty = false; $('password').value = ''; }
+}
+async function showViewer(id) {
+  readOnly = true; document.body.classList.add('ro');
+  $('app').classList.remove('hidden'); $('roBadge').classList.remove('hidden'); $('ownLink').classList.remove('hidden');
+  $('editor').contentEditable = 'false'; $('pTitle').readOnly = true;
+  const { data, error } = await sb.from('notebooks').select('title,data,updated_at').eq('id', id).eq('is_public', true).maybeSingle();
+  if (error || !data) { $('emptyText').textContent = 'Dit notitieblok bestaat niet of wordt niet meer gedeeld.'; $('emptyState').classList.remove('hidden'); $('nav').classList.add('hidden'); $('pagesCol').classList.add('hidden'); return; }
+  document.title = data.title + ' - jf.notes';
+  nb = normalize(data.data); nbTitle = data.title; secId = nb.sections[0].id; pageId = nb.sections[0].pages[0] ? nb.sections[0].pages[0].id : null;
+  renderAll();
+}
+
+/* ---------- Notitieblokken laden en opslaan ---------- */
+async function loadItems(openFirst) {
+  setStatus('Laden...');
+  const { data, error } = await sb.from('notebooks').select(FIELDS).order('updated_at', { ascending: false });
+  if (error) return setStatus('Fout bij laden: ' + error.message);
+  items = data; renderNbList(); setStatus('');
+  if (openFirst) { const last = localStorage.getItem('jf-notes-last'); const t = items.find(d => d.id === last && !d.deleted_at) || items.find(d => !d.deleted_at); if (t) openItem(t.id); else showEmpty(); }
+}
+function newPage() { const n = new Date().toISOString(); return { id: uid(), title: '', html: '', created: n, updated: n, lined: false }; }
+function newSection(name, color) { return { id: uid(), name, color, pages: [newPage()] }; }
+function normalize(d) {
+  d = d || {}; if (!Array.isArray(d.sections) || !d.sections.length) d.sections = [newSection('Algemeen', d.color || COLORS[0])];
+  d.color = d.color || COLORS[0];
+  d.sections.forEach((s, i) => { s.id = s.id || uid(); s.name = s.name || 'Sectie'; s.color = s.color || COLORS[i % COLORS.length]; s.pages = Array.isArray(s.pages) ? s.pages : []; s.pages.forEach(p => { p.id = p.id || uid(); p.html = p.html || ''; p.title = p.title || ''; p.created = p.created || new Date().toISOString(); p.updated = p.updated || p.created; }); });
+  return d;
+}
+async function openItem(id) {
+  await saveNow();
+  const { data, error } = await sb.from('notebooks').select('*').eq('id', id).single();
+  if (error) return setStatus('Kon notitieblok niet openen');
+  currentId = id; localStorage.setItem('jf-notes-last', id);
+  nb = normalize(data.data); nbTitle = data.title;
+  let pos = {}; try { pos = JSON.parse(localStorage.getItem('jf-notes-pos-' + id) || '{}'); } catch (e) {}
+  const s = nb.sections.find(x => x.id === pos.s) || nb.sections[0]; secId = s.id;
+  const p = s.pages.find(x => x.id === pos.p) || s.pages[0]; pageId = p ? p.id : null;
+  $('search').value = '';
+  $('emptyState').classList.add('hidden');
+  renderAll(); renderNbList(); setStatus('Opgeslagen');
+}
+function showEmpty() { currentId = null; nb = null; $('pageView').classList.add('hidden'); $('emptyState').classList.remove('hidden'); $('nbName').textContent = 'Notitieblokken'; $('secList').innerHTML = ''; $('pageList').innerHTML = ''; $('secTitle').textContent = ''; document.title = 'jf.notes'; renderNbList(); }
+function markDirty() { if (readOnly || !currentId) return; dirty = true; setStatus('Niet opgeslagen...'); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 1000); }
+async function saveNow() {
+  clearTimeout(saveTimer);
+  if (!dirty || !currentId || readOnly) return;
+  if (!navigator.onLine) { setStatus('Offline - wordt later opgeslagen'); return; }
+  dirty = false;
+  const id = currentId, updated_at = new Date().toISOString();
+  setStatus('Opslaan...');
+  const { error } = await sb.from('notebooks').update({ title: nbTitle, data: nb, updated_at }).eq('id', id);
+  if (error) { dirty = true; setStatus('Opslaan mislukt - opnieuw proberen...'); saveTimer = setTimeout(saveNow, 5000); return; }
+  const d = items.find(x => x.id === id); if (d) { d.title = nbTitle; d.updated_at = updated_at; }
+  setStatus('Opgeslagen \u2713');
+}
+window.addEventListener('online', () => { $('offline').classList.add('hidden'); if (dirty) saveNow(); });
+window.addEventListener('offline', () => $('offline').classList.remove('hidden'));
+window.addEventListener('beforeunload', e => { if (dirty) { saveNow(); e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- Notitieblok-menu ---------- */
+function fmtDate(s, long) {
+  const d = new Date(s), now = new Date(), tm = d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  if (long) return d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' ' + tm;
+  if (d.toDateString() === now.toDateString()) return 'Vandaag ' + tm;
+  const y = new Date(now); y.setDate(now.getDate() - 1); if (d.toDateString() === y.toDateString()) return 'Gisteren ' + tm;
+  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function renderNbList() {
+  const box = $('nbList'), trash = nbView === 'trash'; box.innerHTML = '';
+  const list = items.filter(d => !!d.deleted_at === trash).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updated_at.localeCompare(a.updated_at));
+  const h = document.createElement('div'); h.className = 'mh'; h.textContent = trash ? 'Prullenbak' : 'Notitieblokken'; box.append(h);
+  if (!list.length) { const e = document.createElement('div'); e.className = 'empty-list'; e.textContent = trash ? 'De prullenbak is leeg.' : 'Nog geen notitieblokken.'; box.append(e); }
+  list.forEach(d => {
+    const b = document.createElement('button'); b.className = 'nb-item' + (d.id === currentId ? ' cur' : ''); b.setAttribute('data-keep', '');
+    const c = d.id === currentId && nb ? nb.color : hashColor(d.id);
+    b.innerHTML = '<span class="cdot" style="background:' + c + '"></span><span class="nm">' + (d.pinned ? '\u2605 ' : '') + esc(d.title) + (d.is_public ? ' \uD83D\uDD17' : '') + '</span><span class="dt">' + fmtDate(trash ? d.deleted_at : d.updated_at) + '</span>';
+    if (trash) {
+      box.append(b);
+      const a = document.createElement('div'); a.className = 'nb-acts';
+      const r = document.createElement('button'); r.className = 'icon-btn'; r.textContent = 'Herstellen'; r.setAttribute('data-keep', ''); r.onclick = () => restoreNb(d.id);
+      const x = document.createElement('button'); x.className = 'icon-btn danger'; x.textContent = 'Definitief weg'; x.setAttribute('data-keep', ''); x.onclick = () => deleteForever(d.id);
+      a.append(r, x); box.append(a);
+    } else { b.removeAttribute('data-keep'); b.onclick = () => { openItem(d.id); document.body.classList.remove('side-open'); }; box.append(b); }
+  });
+  const hr = document.createElement('hr'); box.append(hr);
+  if (!readOnly) {
+    if (!trash) { const n = document.createElement('button'); n.textContent = '+ Nieuw notitieblok'; n.onclick = () => openNbModal(false); box.append(n); }
+    const t = document.createElement('button'); t.setAttribute('data-keep', ''); const tc = items.filter(d => d.deleted_at).length;
+    t.textContent = trash ? '\u2190 Terug naar notitieblokken' : '\uD83D\uDDD1 Prullenbak (' + tc + ')';
+    t.onclick = () => { nbView = trash ? 'list' : 'trash'; renderNbList(); }; box.append(t);
+    if (trash && tc) { const x = document.createElement('button'); x.textContent = 'Prullenbak legen'; x.style.color = 'var(--danger)'; x.onclick = emptyTrash; box.append(x); }
+  }
+}
+let nbModalEdit = false, nbPickColor = COLORS[0];
+function openNbModal(edit) {
+  nbModalEdit = edit; nbPickColor = edit && nb ? nb.color : COLORS[Math.floor(Math.random() * COLORS.length)];
+  $('nbModalTitle').textContent = edit ? 'Notitieblok aanpassen' : 'Nieuw notitieblok'; $('nbSave').textContent = edit ? 'Opslaan' : 'Maken';
+  $('nbNameInp').value = edit ? nbTitle : '';
+  $('nbSwatches').innerHTML = COLORS.map(c => '<button data-c="' + c + '" style="background:' + c + '"' + (c === nbPickColor ? ' class="on"' : '') + '></button>').join('');
+  openModal('nbModal'); setTimeout(() => $('nbNameInp').focus(), 50);
+}
+$('nbSwatches').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (!b) return; nbPickColor = b.dataset.c; [...$('nbSwatches').children].forEach(x => x.classList.toggle('on', x === b)); });
+$('nbNameInp').addEventListener('keydown', e => { if (e.key === 'Enter') $('nbSave').click(); });
+$('nbSave').onclick = async () => {
+  const name = $('nbNameInp').value.trim() || 'Mijn notitieblok'; closeModals();
+  if (nbModalEdit && nb) { nbTitle = name; nb.color = nbPickColor; renderNav(); renderNbList(); markDirty(); return; }
+  await saveNow();
+  const data = { color: nbPickColor, sections: [newSection('Algemeen', nbPickColor)] };
+  const { data: row, error } = await sb.from('notebooks').insert({ title: name, data }).select(FIELDS).single();
+  if (error) return alert('Kon geen notitieblok maken: ' + error.message);
+  items.unshift(row); nbView = 'list'; await openItem(row.id); setTimeout(() => $('pTitle').focus(), 100);
+};
+$('newNbBtn').onclick = () => openNbModal(false);
+$('emptyNew').onclick = () => openNbModal(false);
+$('nbRename').onclick = () => { if (nb) openNbModal(true); };
+$('nbColor').onclick = () => { if (nb) openNbModal(true); };
+$('nbPin').onclick = async () => { const d = curItem(); if (!d) return; const pinned = !d.pinned; const { error } = await sb.from('notebooks').update({ pinned }).eq('id', d.id); if (error) return alert(error.message); d.pinned = pinned; renderNbList(); toast(pinned ? 'Toegevoegd aan favorieten' : 'Uit favorieten gehaald'); };
+$('nbDelete').onclick = async () => {
+  const d = curItem(); if (!d) return; await saveNow();
+  const deleted_at = new Date().toISOString();
+  const { error } = await sb.from('notebooks').update({ deleted_at, is_public: false }).eq('id', d.id);
+  if (error) return alert(error.message);
+  d.deleted_at = deleted_at; d.is_public = false; currentId = null;
+  const next = items.find(x => !x.deleted_at); if (next) openItem(next.id); else showEmpty();
+  toast('Notitieblok naar de prullenbak verplaatst');
+};
+async function restoreNb(id) { const { error } = await sb.from('notebooks').update({ deleted_at: null }).eq('id', id); if (error) return alert(error.message); const d = items.find(x => x.id === id); if (d) d.deleted_at = null; nbView = 'list'; openItem(id); toast('Hersteld'); }
+async function deleteForever(id) { if (!confirm('Dit notitieblok definitief verwijderen? Dit kan niet ongedaan worden.')) return; const { error } = await sb.from('notebooks').delete().eq('id', id); if (error) return alert(error.message); items = items.filter(x => x.id !== id); renderNbList(); }
+async function emptyTrash() { const n = items.filter(d => d.deleted_at).length; if (!n || !confirm('Alle ' + n + ' notitieblokken in de prullenbak definitief verwijderen?')) return; const { error } = await sb.from('notebooks').delete().not('deleted_at', 'is', null); if (error) return alert(error.message); items = items.filter(d => !d.deleted_at); renderNbList(); toast('Prullenbak geleegd'); }
+function fillShare() { const d = curItem(); if (!d) return; $('publicChk').checked = !!d.is_public; $('shareRow').classList.toggle('hidden', !d.is_public); $('shareLink').value = location.origin + location.pathname + '?view=' + d.id; }
+$('nbShare').onclick = () => { fillShare(); openModal('shareModal'); };
+$('publicChk').onchange = async () => { const d = curItem(); if (!d) return; const is_public = $('publicChk').checked; const { error } = await sb.from('notebooks').update({ is_public }).eq('id', d.id); if (error) { $('publicChk').checked = !is_public; return alert(error.message); } d.is_public = is_public; fillShare(); renderNbList(); };
+$('copyLink').onclick = async () => { try { await navigator.clipboard.writeText($('shareLink').value); } catch (e) { $('shareLink').select(); document.execCommand('copy'); } toast('Link gekopieerd!'); };
+
+/* ---------- Secties en pagina's ---------- */
+function sec() { return nb.sections.find(s => s.id === secId) || nb.sections[0]; }
+function page() { const s = sec(); return s ? s.pages.find(p => p.id === pageId) : null; }
+function findPage(pid) { for (const s of nb.sections) { const p = s.pages.find(x => x.id === pid); if (p) return { s, p }; } return null; }
+function savePos() { if (currentId) localStorage.setItem('jf-notes-pos-' + currentId, JSON.stringify({ s: secId, p: pageId })); }
+function renderAll() { renderNav(); renderPages(); renderEditor(); }
+function renderNav() {
+  $('nbName').textContent = nbTitle; $('nbDot').style.background = nb.color;
+  document.title = (page() ? (page().title || 'Naamloze pagina') + ' - ' : '') + nbTitle + ' - jf.notes';
+  const ul = $('secList'); ul.innerHTML = '';
+  nb.sections.forEach(s => {
+    const li = document.createElement('li'); li.dataset.sid = s.id; li.draggable = !readOnly;
+    if (s.id === secId) { li.className = 'active'; li.style.setProperty('--sectint', s.color + '22'); }
+    li.innerHTML = '<span class="bar" style="background:' + s.color + '"></span><span class="nm">' + esc(s.name) + '</span><span class="cnt">' + s.pages.length + '</span><span class="sacts"><button data-sa="ren" title="Naam wijzigen">\u270E</button><button data-sa="col" title="Andere kleur">\uD83C\uDFA8</button><button data-sa="del" title="Verwijderen">\uD83D\uDDD1</button></span>';
+    ul.append(li);
+  });
+  const s = sec(); $('secTitle').innerHTML = s ? '<span class="cdot" style="background:' + s.color + '"></span>' + esc(s.name) : '';
+}
+function snippet(html) { const d = document.createElement('div'); d.innerHTML = clean(html); return d.textContent.replace(/\s+/g, ' ').trim().slice(0, 90); }
+function renderPages() {
+  const ul = $('pageList'), q = $('search').value.trim().toLowerCase(); ul.innerHTML = '';
+  let list;
+  if (q) { list = []; nb.sections.forEach(s => s.pages.forEach(p => { if ((p.title || '').toLowerCase().includes(q) || snippet(p.html).toLowerCase().includes(q) || (clean(p.html).toLowerCase().includes(q))) list.push({ s, p }); })); }
+  else list = sec() ? sec().pages.map(p => ({ s: sec(), p })) : [];
+  if (!list.length) { const e = document.createElement('div'); e.className = 'empty-list'; e.textContent = q ? 'Niks gevonden voor "' + q + '".' : 'Nog geen pagina\u2019s in deze sectie.'; ul.append(e); return; }
+  list.forEach(({ s, p }) => {
+    const li = document.createElement('li'); li.dataset.pid = p.id; li.dataset.sid = s.id; li.draggable = !readOnly && !q;
+    if (p.id === pageId) li.className = 'active';
+    li.innerHTML = '<div class="t">' + esc(p.title || 'Naamloze pagina') + '</div><div class="s">' + (q ? '<span class="chip" style="background:' + s.color + '">' + esc(s.name) + '</span>' : '') + esc(snippet(p.html) || 'Leeg') + '</div><div class="d">' + fmtDate(p.updated) + '</div><span class="pacts"><button data-pa="dup" title="Dupliceren">\u29C9</button><button data-pa="del" title="Verwijderen">\uD83D\uDDD1</button></span>';
+    ul.append(li);
+  });
+}
+function updatePageItem() {
+  const p = page(); if (!p) return; const li = $('pageList').querySelector('li[data-pid="' + p.id + '"]'); if (!li) return;
+  li.querySelector('.t').textContent = p.title || 'Naamloze pagina'; li.querySelector('.d').textContent = fmtDate(p.updated);
+  const s = li.querySelector('.s'); const chip = s.querySelector('.chip'); s.textContent = snippet(p.html) || 'Leeg'; if (chip) s.prepend(chip);
+}
+function renderEditor() {
+  if (!nb) return;
+  $('pageView').classList.remove('hidden');
+  const p = page();
+  $('sheet').classList.toggle('hidden', !p); $('noPage').classList.toggle('hidden', !!p);
+  if (!p) { renderPageMenu(); return; }
+  $('pTitle').value = p.title; $('editor').innerHTML = clean(p.html);
+  $('editor').classList.toggle('lined', !!p.lined); $('linedBtn').classList.toggle('on', !!p.lined);
+  $('pMeta').textContent = fmtDate(p.created, true) + (p.updated !== p.created ? '  \u00b7  bewerkt ' + fmtDate(p.updated).toLowerCase() : '');
+  $('pageScroll').scrollTop = 0; renderPageMenu(); savePos();
+}
+function selectSection(id) { secId = id; const s = sec(); pageId = s.pages[0] ? s.pages[0].id : null; $('search').value = ''; renderAll(); }
+function selectPage(sid, pid) { secId = sid; pageId = pid; renderNav(); renderPages(); renderEditor(); document.body.classList.remove('side-open'); }
+$('secList').addEventListener('click', e => {
+  const li = e.target.closest('li'); if (!li) return; const s = nb.sections.find(x => x.id === li.dataset.sid); const a = e.target.closest('[data-sa]');
+  if (a) {
+    e.stopPropagation();
+    if (a.dataset.sa === 'ren') { const n = prompt('Nieuwe naam voor deze sectie:', s.name); if (n && n.trim()) { s.name = n.trim(); renderNav(); renderPages(); markDirty(); } }
+    else if (a.dataset.sa === 'col') { s.color = COLORS[(COLORS.indexOf(s.color) + 1) % COLORS.length]; renderNav(); markDirty(); }
+    else if (a.dataset.sa === 'del') { if (nb.sections.length === 1) return toast('Een notitieblok heeft minstens \u00e9\u00e9n sectie'); if (!confirm('Sectie "' + s.name + '" met ' + s.pages.length + ' pagina(\u2019s) verwijderen?')) return; nb.sections = nb.sections.filter(x => x !== s); if (secId === s.id) selectSection(nb.sections[0].id); else renderNav(); markDirty(); }
+    return;
+  }
+  selectSection(s.id);
+});
+$('addSec').onclick = addSection;
+function addSection() { if (!nb || readOnly) return; const n = prompt('Naam van de nieuwe sectie:', 'Nieuwe sectie'); if (n === null) return; const used = nb.sections.map(s => s.color); const c = COLORS.find(x => used.indexOf(x) < 0) || COLORS[nb.sections.length % COLORS.length]; const s = newSection(n.trim() || 'Nieuwe sectie', c); nb.sections.push(s); secId = s.id; pageId = s.pages[0].id; $('search').value = ''; renderAll(); markDirty(); setTimeout(() => $('pTitle').focus(), 50); }
+function addPage() { if (!nb || readOnly) return; const s = sec(); const p = newPage(); s.pages.push(p); pageId = p.id; $('search').value = ''; renderAll(); markDirty(); setTimeout(() => $('pTitle').focus(), 50); }
+$('addPage').onclick = addPage; $('noPageAdd').onclick = addPage;
+function delPage(sid, pid) {
+  const s = nb.sections.find(x => x.id === sid), p = s.pages.find(x => x.id === pid);
+  if (snippet(p.html) && !confirm('Pagina "' + (p.title || 'Naamloze pagina') + '" verwijderen?')) return;
+  const i = s.pages.indexOf(p); s.pages.splice(i, 1);
+  if (pageId === pid) { secId = sid; const n = s.pages[Math.min(i, s.pages.length - 1)]; pageId = n ? n.id : null; }
+  renderAll(); markDirty(); toast('Pagina verwijderd');
+}
+function dupPage(sid, pid) { const s = nb.sections.find(x => x.id === sid), p = s.pages.find(x => x.id === pid); const c = JSON.parse(JSON.stringify(p)); c.id = uid(); c.title = (p.title || 'Naamloze pagina') + ' (kopie)'; c.created = c.updated = new Date().toISOString(); s.pages.splice(s.pages.indexOf(p) + 1, 0, c); secId = sid; pageId = c.id; renderAll(); markDirty(); }
+$('pageList').addEventListener('click', e => {
+  const li = e.target.closest('li'); if (!li || !li.dataset.pid) return; const a = e.target.closest('[data-pa]');
+  if (a) { e.stopPropagation(); if (a.dataset.pa === 'del') delPage(li.dataset.sid, li.dataset.pid); else dupPage(li.dataset.sid, li.dataset.pid); return; }
+  selectPage(li.dataset.sid, li.dataset.pid);
+});
+$('search').addEventListener('input', renderPages);
+$('search').addEventListener('keydown', e => { if (e.key === 'Escape') { $('search').value = ''; renderPages(); } if (e.key === 'Enter') { const f = $('pageList').querySelector('li[data-pid]'); if (f) selectPage(f.dataset.sid, f.dataset.pid); } });
+let dragKind = null, dragId = null;
+function setupDrag(ul, kind) {
+  ul.addEventListener('dragstart', e => { const li = e.target.closest('li'); if (!li) return; dragKind = kind; dragId = kind === 'sec' ? li.dataset.sid : li.dataset.pid; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', kind); } catch (x) {} });
+  ul.addEventListener('dragover', e => { if (!dragKind) return; const li = e.target.closest('li'); if (dragKind === 'page' && kind === 'sec' && li) { e.preventDefault(); [...ul.children].forEach(x => x.classList.toggle('drop', false)); li.style.outline = '2px dashed var(--accent)'; return; } if (dragKind !== kind) return; e.preventDefault(); [...ul.children].forEach(x => x.classList.toggle('drop', x === li)); });
+  ul.addEventListener('dragleave', e => { const li = e.target.closest('li'); if (li) li.style.outline = ''; });
+  ul.addEventListener('drop', e => {
+    e.preventDefault(); const li = e.target.closest('li'); [...ul.children].forEach(x => { x.classList.remove('drop'); x.style.outline = ''; });
+    if (!li || !dragKind) return;
+    if (dragKind === 'page' && kind === 'sec') { const f = findPage(dragId), to = nb.sections.find(s => s.id === li.dataset.sid); if (f && to && to !== f.s) { f.s.pages.splice(f.s.pages.indexOf(f.p), 1); to.pages.push(f.p); secId = to.id; pageId = f.p.id; renderAll(); markDirty(); toast('Pagina verplaatst naar ' + to.name); } }
+    else if (dragKind === kind) {
+      const arr = kind === 'sec' ? nb.sections : sec().pages, from = arr.findIndex(x => x.id === dragId), to = arr.findIndex(x => x.id === (kind === 'sec' ? li.dataset.sid : li.dataset.pid));
+      if (from >= 0 && to >= 0 && from !== to) { const [m] = arr.splice(from, 1); arr.splice(to, 0, m); renderNav(); renderPages(); markDirty(); }
+    }
+    dragKind = null;
+  });
+  ul.addEventListener('dragend', () => { dragKind = null; [...ul.children].forEach(x => { x.classList.remove('drop'); x.style.outline = ''; }); });
+}
+setupDrag($('secList'), 'sec'); setupDrag($('pageList'), 'page');
+function renderPageMenu() {
+  const p = page(), m = $('pageMenu'); m.innerHTML = '';
+  const add = (label, fn) => { const b = document.createElement('button'); b.innerHTML = label; b.onclick = fn; m.append(b); };
+  if (!p) { add('+ Nieuwe pagina', addPage); return; }
+  add('\uD83D\uDDA8 PDF / printen', () => window.print());
+  add('\u2B07 Downloaden als .html', () => download(fileName() + '.html', '<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>' + esc(p.title || 'Pagina') + '</title><style>body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.6}</style></head><body><h1>' + esc(p.title || '') + '</h1>' + clean(p.html) + '</body></html>', 'text/html'));
+  add('\u2B07 Downloaden als .txt', () => { const d = document.createElement('div'); d.innerHTML = clean(p.html); download(fileName() + '.txt', (p.title ? p.title + '\n\n' : '') + d.innerText, 'text/plain'); });
+  if (readOnly) return;
+  const hr = document.createElement('hr'); m.append(hr);
+  add('\u29C9 Dupliceren', () => dupPage(secId, p.id));
+  if (nb.sections.length > 1) { const h = document.createElement('div'); h.className = 'mh'; h.textContent = 'Verplaatsen naar'; m.append(h); nb.sections.filter(s => s.id !== secId).forEach(s => add('<span class="cdot" style="background:' + s.color + '"></span>' + esc(s.name), () => { const cs = sec(); cs.pages.splice(cs.pages.indexOf(p), 1); s.pages.push(p); secId = s.id; renderAll(); markDirty(); toast('Verplaatst naar ' + s.name); })); m.append(document.createElement('hr')); }
+  add('\uD83D\uDDD1 Pagina verwijderen', () => delPage(secId, p.id));
+}
+function fileName() { const p = page(); return ((p && p.title) || 'notitie').replace(/[\\/:*?"<>|]/g, ''); }
+function download(name, content, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type })); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+
+/* ---------- Bewerken ---------- */
+document.execCommand('defaultParagraphSeparator', false, 'p');
+let listTimer = null;
+function touch() { const p = page(); if (!p) return; p.updated = new Date().toISOString(); markDirty(); clearTimeout(listTimer); listTimer = setTimeout(updatePageItem, 300); }
+$('editor').addEventListener('input', () => { const p = page(); if (!p || readOnly) return; p.html = $('editor').innerHTML; touch(); });
+$('pTitle').addEventListener('input', () => { const p = page(); if (!p) return; p.title = $('pTitle').value; touch(); document.title = (p.title || 'Naamloze pagina') + ' - ' + nbTitle + ' - jf.notes'; });
+$('pTitle').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('editor').focus(); } });
+function sync() { const p = page(); if (!p) return; p.html = $('editor').innerHTML; touch(); }
+document.addEventListener('selectionchange', () => {
+  const s = getSelection(); if (!s.rangeCount || !$('editor').contains(s.anchorNode)) return;
+  savedRange = s.getRangeAt(0).cloneRange();
+  let v = (document.queryCommandValue('formatBlock') || 'p').toLowerCase(); if (['p', 'h1', 'h2', 'h3', 'blockquote', 'pre'].indexOf(v) < 0) v = 'p'; $('blockSel').value = v;
+  ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList'].forEach(c => { const b = document.querySelector('[data-cmd="' + c + '"]'); if (b) b.classList.toggle('on', document.queryCommandState(c)); });
+});
+function restoreSel() { $('editor').focus(); if (savedRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); } }
+document.querySelectorAll('[data-cmd]').forEach(b => { b.addEventListener('mousedown', e => e.preventDefault()); b.addEventListener('click', () => { if (b.dataset.cmd === 'undo' || b.dataset.cmd === 'redo') $('editor').focus(); else restoreSel(); document.execCommand(b.dataset.cmd, false, null); sync(); }); });
+$('blockSel').onchange = e => { restoreSel(); document.execCommand('formatBlock', false, '<' + e.target.value + '>'); sync(); };
+$('colorPick').addEventListener('change', e => { restoreSel(); document.execCommand('foreColor', false, e.target.value); sync(); });
+$('hlPick').addEventListener('change', e => { restoreSel(); document.execCommand('hiliteColor', false, e.target.value); sync(); });
+function closestIn(node, sel) { while (node && node !== $('editor')) { if (node.nodeType === 1 && node.matches(sel)) return node; node = node.parentNode; } return null; }
+function toggleTodo() {
+  restoreSel(); const s = getSelection(); let ul = s.rangeCount ? closestIn(s.anchorNode, 'ul') : null;
+  if (ul && ul.classList.contains('todo')) { ul.classList.remove('todo'); [...ul.children].forEach(li => li.classList.remove('done')); sync(); return; }
+  if (!ul) { document.execCommand('insertUnorderedList'); ul = closestIn(getSelection().anchorNode, 'ul'); }
+  if (ul) ul.classList.add('todo'); sync();
+}
+$('editor').addEventListener('click', e => {
+  const a = e.target.closest('a'); if (a && (e.ctrlKey || e.metaKey)) { window.open(a.href, '_blank', 'noopener'); return; }
+  const li = e.target.closest('ul.todo > li'); if (!li || readOnly) return;
+  const r = li.getBoundingClientRect(); if (e.clientX - r.left < 28) { li.classList.toggle('done'); sync(); }
+});
+const TAGS = { star: '\u2B50 Belangrijk', vraag: '\u2753 Vraag', idee: '\uD83D\uDCA1 Idee', let: '\u26A0\uFE0F Let op' };
+document.querySelectorAll('[data-tag]').forEach(b => { b.addEventListener('mousedown', e => e.preventDefault()); b.addEventListener('click', () => { restoreSel(); document.execCommand('insertHTML', false, '<span class="tag ' + b.dataset.tag + '">' + TAGS[b.dataset.tag] + '</span>&nbsp;'); sync(); }); });
+function insertLink() { const u0 = prompt('Link (bijv. jimfun.com):'); if (!u0) return; let u = u0.trim(); if (!/^(https?:|mailto:)/i.test(u)) u = 'https://' + u; restoreSel(); if (getSelection().isCollapsed) document.execCommand('insertHTML', false, '<a href="' + esc(u) + '">' + esc(u0.trim()) + '</a>&nbsp;'); else document.execCommand('createLink', false, u); sync(); }
+function insertTable() { const inp = prompt('Grootte van de tabel (rijen x kolommen):', '3x3'); if (!inp) return; const p = inp.toLowerCase().split('x'); const rows = Math.min(30, Math.max(1, parseInt(p[0]) || 3)), cols = Math.min(10, Math.max(1, parseInt(p[1]) || 3)); let h = '<table><tbody>'; for (let r = 0; r < rows; r++) { h += '<tr>'; for (let c = 0; c < cols; c++) h += r === 0 ? '<th><br></th>' : '<td><br></td>'; h += '</tr>'; } h += '</tbody></table><p><br></p>'; restoreSel(); document.execCommand('insertHTML', false, h); sync(); }
+function compressImage(file) {
+  return new Promise((res, rej) => { const img = new Image(), url = URL.createObjectURL(file); img.onload = () => { const m = 1400, r = Math.min(1, m / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); const png = file.type === 'image/png' && file.size < 300000; res(c.toDataURL(png ? 'image/png' : 'image/jpeg', .82)); }; img.onerror = () => rej(new Error('x')); img.src = url; });
+}
+async function insertImageFile(f) { try { const src = await compressImage(f); restoreSel(); document.execCommand('insertImage', false, src); sync(); } catch (e) { alert('Deze afbeelding kon niet worden gelezen.'); } }
+const ACTS = {
+  todo: toggleTodo, link: insertLink, table: insertTable,
+  clear: () => { restoreSel(); document.execCommand('removeFormat'); document.execCommand('formatBlock', false, '<p>'); sync(); },
+  lined: () => { const p = page(); if (!p) return; p.lined = !p.lined; $('editor').classList.toggle('lined', p.lined); $('linedBtn').classList.toggle('on', p.lined); markDirty(); },
+  imgUpload: () => $('imgFile').click(),
+  imgUrl: () => { const u = prompt('Plak de link naar een afbeelding (https://...):'); if (!u) return; if (!/^https?:\/\//i.test(u.trim())) return alert('Gebruik een link die begint met https://'); restoreSel(); document.execCommand('insertImage', false, u.trim()); sync(); }
+};
+document.querySelectorAll('[data-act]').forEach(b => { b.addEventListener('mousedown', e => e.preventDefault()); b.addEventListener('click', () => { const f = ACTS[b.dataset.act]; if (f) f(); }); });
+$('imgFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) insertImageFile(f); };
+$('editor').addEventListener('paste', e => {
+  const cd = e.clipboardData || window.clipboardData; if (!cd) return;
+  const img = [...(cd.items || [])].find(i => i.type && i.type.indexOf('image/') === 0);
+  if (img) { e.preventDefault(); const f = img.getAsFile(); if (f) insertImageFile(f); return; }
+  e.preventDefault(); document.execCommand('insertText', false, cd.getData('text/plain'));
+});
+$('editor').addEventListener('keydown', e => {
+  if (e.key === 'Tab') { e.preventDefault(); document.execCommand(e.shiftKey ? 'outdent' : 'indent'); sync(); }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    const s = getSelection(), li = s.rangeCount ? closestIn(s.anchorNode, 'ul.todo > li') : null;
+    if (li) setTimeout(() => { const n = closestIn(getSelection().anchorNode, 'ul.todo > li'); if (n && n !== li) { n.classList.remove('done'); sync(); } }, 0);
+  }
+});
+
+/* ---------- Sneltoetsen ---------- */
+document.addEventListener('keydown', e => {
+  if (document.querySelector('.modal-bg:not(.hidden)')) { if (e.key === 'Escape') closeModals(); return; }
+  if (!nb || $('app').classList.contains('hidden')) return;
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), inEd = $('editor').contains(document.activeElement) || document.activeElement === $('editor');
+  if (mod && k === 's') { e.preventDefault(); saveNow(); return; }
+  if (mod && k === 'f') { e.preventDefault(); document.body.classList.remove('side-hidden'); $('search').focus(); $('search').select(); return; }
+  if (readOnly) return;
+  if (e.altKey && !mod && k === 'n') { e.preventDefault(); addPage(); return; }
+  if (e.altKey && !mod && k === 's') { e.preventDefault(); addSection(); return; }
+  if (e.altKey && !mod && k === 't') { e.preventDefault(); toggleTodo(); return; }
+  if (mod && k === 'k' && inEd) { e.preventDefault(); insertLink(); return; }
+  if (mod && e.altKey && ['0', '1', '2', '3'].indexOf(e.key) >= 0 && inEd) { e.preventDefault(); document.execCommand('formatBlock', false, e.key === '0' ? '<p>' : '<h' + e.key + '>'); sync(); return; }
+  if (mod && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && !inEd && document.activeElement.tagName !== 'INPUT') {
+    e.preventDefault(); const s = sec(), i = s.pages.findIndex(p => p.id === pageId), n = s.pages[i + (e.key === 'ArrowDown' ? 1 : -1)]; if (n) selectPage(s.id, n.id);
+  }
+});
+
+init();
+</script>
+</body>
+</html>
